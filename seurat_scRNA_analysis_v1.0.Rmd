@@ -1,0 +1,204 @@
+
+#SEURAT scRNA processing tool
+
+#Author: Sidney van der Zande (s1033266)
+#Contact: sidney.vanderzande@ru.nl
+
+#v1.0: default version
+
+```{r}
+#Loading in required packages
+library("dplyr")
+library("Seurat")
+library("patchwork")
+library("umap")
+library("clustree")
+library("SingleCellExperiment")
+
+sessionInfo()
+
+#Set daily working directory
+workdir <- "/scratch/szande_jarts/diff_gene_expression_wt_vs_TERT/"
+dateoftoday <- gsub("-", "", as.character(Sys.Date()))
+resultsdir <- paste0(workdir, dateoftoday)
+system(paste("mkdir -p ", resultsdir))
+setwd(resultsdir)
+
+#Set PDF for results
+pdf(paste(resultsdir,'rnaseq_result_keratinocytes.pdf',sep="/") ,width=7,height=8,paper='special')
+
+#Load in the Seurat object (this will be your input data)
+seur_obj <- readRDS("/scratch/szande_jarts/data/KC_tert_HGNC_seurat.rds")
+
+#Add the percentage of mitochondrial genes to the metadata of your Seurat object
+seur_obj[["percent.mt"]] <- PercentageFeatureSet(seur_obj, pattern = "^MT-")
+
+#You can now visualise the features of your dataset, as well as the percentage of mitochondrial genes in a violin plot
+VlnPlot(seur_obj, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+
+#Visualise feature-feature relationships
+plot1 <- FeatureScatter(seur_obj, feature1 = "nCount_RNA", feature2 = "percent.mt")
+plot2 <- FeatureScatter(seur_obj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+plot1 + plot2
+
+#Filter your data based on the violin plots
+seur_obj<- subset(seur_obj, subset = nFeature_RNA > 500  & percent.mt < 50)
+
+#If you cannot normalise the counts of your Seurat object due to errors on line 52,
+    #run lines 48-50 to generate a new Seurat object using the counts you already have. Then continue from line 52 onwards.
+
+#If you can run line 52 normally without errors, skip lines 48-50 and continue from line 52 onwards.
+counts_seur<-seur_obj@assays$RNA@counts
+seur_obj@assays$RNA <- NULL
+seur_obj <- CreateSeuratObject(counts = counts_seur)
+
+seur_obj <- NormalizeData(object = seur_obj)
+
+#Find variable genes, aka genes that differ in expression patterns between cells
+seur_obj <- FindVariableFeatures(seur_obj, selection.method = "vst", nfeatures = 2000)
+
+# Identify the 10 most highly variable genes
+top10 <- head(VariableFeatures(seur_obj), 10)
+
+#Plot the distribution of variable genes with and without gene name labels
+plot1 <- VariableFeaturePlot(seur_obj)
+plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE)
+plot1 + plot2
+
+#Scaling the data based on mean expression and variance
+all.genes <- rownames(seur_obj)
+seur_obj <- ScaleData(seur_obj, features = all.genes)
+
+#The code below will generate PCA and UMAP plots that will be stored in your Seurat object. 
+#You might need to change the "dims" parameter in RunUMAP based on the amount of PC components you want to use in your analysis.
+#You can use the Jackstraw and Elbow plots below for that.
+seur_obj <- RunPCA(seur_obj, features = VariableFeatures(object = seur_obj))
+seur_obj <- RunUMAP(seur_obj, dims = 1:6)
+#Plot the UMAP plot, change reduction to "pca" if you want to see the PCA plot
+DimPlot(seur_obj, reduction = "umap")
+
+#Make a heatmap showing the expression patterns of your genes across the cells.
+DimHeatmap(seur_obj, dims = 1, cells = 500, balanced = TRUE)
+
+#JackStraw scores: determining which PCA axes have good quality
+seur_obj <- JackStraw(seur_obj, num.replicate = 100)
+seur_obj <- ScoreJackStraw(seur_obj, dims = 1:20)
+JackStrawPlot(seur_obj, dims = 1:15)
+
+#Elbow plot: Which amount of PCAs captures the necessary information?
+ElbowPlot(seur_obj)
+
+#Clustering of the cells (UMAP), this will return your original UMAP but now with identified clusters of cells.
+seur_obj <- FindNeighbors(seur_obj, dims = 1:10)
+seur_obj <- FindClusters(seur_obj, resolution = 0.5)
+head(Idents(seur_obj), 5)
+DimPlot(seur_obj, reduction = "umap")
+
+#We now run a validity check by seeing if the clustering we found holds up at a range of resolutions.
+res_vector <- c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
+for (resolution in res_vector)
+{ seur_obj <- FindClusters(seur_obj, resolution = resolution)
+}
+#check if all resolutions are there (0 to 1)
+head(seur_obj[[]])
+#Plot the clustering tree to see at which resolutions the clustering holds up
+clustree(seur_obj, prefix = "RNA_snn_res.", node_colour = "sc3_stability")
+
+#Find marker genes associated with clusters. The min.pct is a threshold, it is the minimum percentage of (total) cells this marker must appear in.
+seur_obj <- FindClusters(seur_obj, resolution = 0.5)
+#Markers for cluster 1 of your UMAP
+cluster.markers <- FindMarkers(seur_obj, ident.1 = 1, min.pct = 0.25)
+head(cluster.markers, n = 5)
+#Markers for cluster 2 of your UMAP
+cluster.markers_2 <- FindMarkers(seur_obj, ident.1 = 0, min.pct = 0.25)
+head(cluster.markers_2, n = 5)
+
+#Plotting the normalised expression of the markers in a violin plot. Exchange the gene names for the gene names you found in your marker analysis above.
+VlnPlot(seur_obj, features = c("KRT10", "DMKN", "KRT1","GLTP","PERP"))
+#Alternatively, plotting raw counts
+VlnPlot(seur_obj, features = c("KRT10", "DMKN", "KRT1","GLTP","PERP"), slot = "counts", log = TRUE)
+#Map the expression of your marker back onto the original UMAP
+FeaturePlot(seur_obj, features = c("KRT10", "DMKN", "KRT1", "GLTP", "PERP"))
+
+#You can use this code to rename your clusters. Swap "1" and "2" for the new cluster IDs.
+new.cluster.ids <- c("1", "2")
+names(new.cluster.ids) <- levels(seur_obj)
+seur_obj <- RenameIdents(seur_obj, new.cluster.ids)
+
+#Making a DimPlot with the new cluster names
+DimPlot(seur_obj, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
+
+dev.off()
+
+# Generate the pseudobulk-tables based on clustering, change sce_qc$sample to the names of your clusters
+
+sce_qc <- SingleCellExperiment(assays = list(counts = GetAssayData(object = seur_obj, slot = "data")))
+
+sce_qc <- SingleCellExperiment(assays = list(counts = GetAssayData(object = seur_obj, slot = "data")))
+
+sce_qc$sample <- seur_obj@active.ident
+sce_qc$sample
+
+pseudobulk_df <- NULL
+
+pseudobulk_df <- as.data.frame(row.names(counts(sce_qc)))
+pseudobulk_df[["C1"]] <- as.vector(rowSums(counts(sce_qc)[,sce_qc$sample == 1]))
+pseudobulk_df[["C2"]] <- as.vector(rowSums(counts(sce_qc)[,sce_qc$sample == 2]))
+
+row.names(pseudobulk_df) <- pseudobulk_df$`row.names(counts(sce_qc))`
+pseudobulk_df$`row.names(counts(sce_qc))` <- NULL
+pseudobulk_df$Gene.name <- rownames(pseudobulk_df)
+write.csv(pseudobulk_df,"/scratch/szande_jarts/data/KC_TERT_counts.csv", row.names = FALSE)
+
+#Generate the pseudobulk clusters based on random sampling
+#Obtain the counts from your original Seurat object
+counts_seur <- seur_obj@assays$RNA@counts
+counts_seur <- as.data.frame(as.matrix(counts_seur))
+counts_seur <- data.matrix(counts_seur)
+
+#Calculate the number of cells from the original Seurat object
+n.cells <- length(Cells(seur_obj))
+n.cells = as.integer(n.cells)
+
+# Calculate the amount of cells that will be assigned to pseudobulk replicate 1, which is half of all cells, half+1 if the total amount of cells is an uneven number. 
+n.cells.subset.1 <- ceiling(n.cells/2)
+
+# Set a seed for reproducible subsampling of cells
+set.seed(seed = 1)
+
+# Randomly half (or half + 1 if n.cells is odd) of the cells 
+# Randomly assign cells into pseudobulk replicate 1
+cells.subset.1 <- base::sample(x = Cells(seur_obj), size = n.cells.subset.1, replace = F)
+
+# Then, assign all cells that are left to pseudobulk replicate 2
+cells.subset.2 <- base::subset(x = Cells(seur_obj), subset = !(Cells(seur_obj) %in% cells.subset.1))
+
+# Couple the counts of each individual cell to its corresponding replicate
+object.subset.1 <- as.data.frame(counts_seur[,colnames(counts_seur) %in% cells.subset.1])
+object.subset.2 <- as.data.frame(counts_seur[,colnames(counts_seur) %in% cells.subset.2])
+
+#Create the pseudobulk by adding up gene counts for each replicate
+object.subset.1$total <-rowSums(object.subset.1)
+object.subset.2$total <-rowSums(object.subset.2)
+
+#Create a data frame of the results and add the gene names
+pseudobulk.1 <- as.data.frame(object.subset.1$total)
+rownames(pseudobulk.1) <- rownames(object.subset.1)
+colnames(pseudobulk.1) <- c("KC_TERT_1")
+pseudobulk.1$gene.name <- rownames(pseudobulk.1)
+
+pseudobulk.2 <- as.data.frame(object.subset.2$total)
+rownames(pseudobulk.2) <- rownames(object.subset.2)
+colnames(pseudobulk.2) <- c("KC_TERT_2")
+pseudobulk.2$gene.name <- rownames(pseudobulk.2)
+
+#Put both replicates in one data frame , rename the columns, and export the result to your working directory
+pseudobulk <- inner_join(pseudobulk.1,pseudobulk.2, by = "gene.name")
+rownames(pseudobulk) <- pseudobulk$gene.name
+pseudobulk$Gene.name <- rownames(pseudobulk)
+pseudobulk <- pseudobulk[,c("KC_TERT_1", "KC_TERT_2","Gene.name")] 
+
+write.csv(pseudobulk,"/scratch/szande_jarts/data/KC_TERT_counts.csv", row.names = FALSE)
+
+#END
+```
