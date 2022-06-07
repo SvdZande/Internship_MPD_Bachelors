@@ -23,6 +23,8 @@ _r_env_4_1.yaml_ : a yaml file to create the conda environment I used to run all
 
 _r_env_4_1_splicing.yaml_ : a yaml file to create the conda environment I used to run the splicing analysis.
 
+_mart_export.txt_ : a list of gene names and their ENSEMBL identifiers, which can be used to couple count tables with ENSEMBL identifiers to their corresponding gene names.
+
 ## Setup
 Running the scripts mentioned in the "Files" section may take large amounts of RAM, especially splicing analysis since BAM files can become very large. Therefore, working on an external server is advised. For this project, I used the MobaXterm application to work on a remote server. To run R studio on an external server, you will need to set up a conda environment.
 
@@ -84,7 +86,7 @@ when your environment is active.
 To pre-process scRNA data, you should create a Seurat object out of the count tables of all cells. A tutorial on Seurat can be found [here](https://satijalab.org/seurat/articles/pbmc3k_tutorial.html). Then, you can use the _splicing_analysis.v1.0.Rmd_ file present in this repository to perform quality controls on these cells, filter them, and assign them to one of the pseudobulk replicates (based on UMAP clustering or random assignment). This will generate pseudobulk count tables that can be directly used for the analyses below.
 
 ### Coupling counts tables to gene names
-As an input, you should have count tables of genes in all conditions. The genes are given in ENSEMBL identifiers. You should also have mart.txt downloaded to your working directory.
+As an input, you should have count tables of genes in all conditions. The genes are given in ENSEMBL identifiers. You should also have _mart_export.txt_  downloaded to your working directory.
 To couple the count table to gene names, use the script coupling_gene_identifiers.Rmd. Do this for the count tables of both conditions (LSCs and KCs), unless your count table already includes gene names (for example for the KC TERT samples).
 
 ### Analysing primary vs TERT limbal stem cells (LSCs)
