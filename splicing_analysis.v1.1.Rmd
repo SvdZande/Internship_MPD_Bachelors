@@ -1,0 +1,215 @@
+
+#RNA differential splicing analysis
+
+#Author: Sidney van der Zande (s1033266)
+#Contact: sidney.vanderzande@ru.nl
+
+#Version 1.1: removed SGSeq and de novo alignment section, added annotation
+
+```{r}
+#Load required packages
+library("TxDb.Hsapiens.UCSC.hg38.knownGene")
+library("BSgenome.Hsapiens.UCSC.hg38")
+library("DEXSeq")
+library("Rsamtools")
+library("dplyr")
+library ("plyr")
+library('biomaRt')
+library("GenomicRanges")
+library("GenomicFeatures")
+library("GenomicAlignments")
+library("AnnotationHub")
+library("clusterProfiler")
+library("DOSE")
+library("org.Hs.eg.db")
+library("AnnotationDbi")
+library("enrichplot")
+
+sessionInfo()
+
+#Setting up daily directories
+workdir <- "/scratch/szande_jarts/diff_gene_expression_wt_vs_TERT/"
+dateoftoday <- gsub("-", "", as.character(Sys.Date()))
+resultsdir <- paste0(workdir, dateoftoday)
+system(paste("mkdir -p ", resultsdir))
+setwd(resultsdir)
+
+##Setting up a dxd object from scratch, does not need Python
+
+#Create a database containing ony exonic transcripts
+hse <- TxDb.Hsapiens.UCSC.hg38.knownGene
+exonicParts = exonicParts( hse, linked.to.single.gene.only = TRUE )
+#Set the naming of the chromosomes to the NCBI style of naming
+seqlevelsStyle(exonicParts) <- "NCBI"
+
+#Specify the path to the BAM files. The working directory should be the directory that your BAM files are in.
+setwd("/scratch/szande_jarts/data/bam_bw_TERT")
+#This will find every file in your working directory with the extension XS.bam. If your BAM files have a different extension, such as .bam, then change the code below to match the extension name.
+fls <- dir(".", "XS.bam$")
+
+#Overlap the reads from the BAM files with the exonic transcripts to find reads that map to exons
+#(make sure you are in the directory with the BAM files, otherwise you get an error that
+#   the files do not exist)
+SE <- summarizeOverlaps( exonicParts, fls, mode="Union", singleEnd=FALSE, ignore.strand=TRUE, inter.feature=FALSE, fragments=TRUE )
+
+#Save the resulting object in your working directory
+setwd(resultsdir)
+saveRDS(SE, file= "summarizeOverlaps_object")
+
+#Specify the conditions of your experiment: in this case, I had two primary replicates and two TERT replicates. You need to have replicates for the splicing analysis.
+colData(SE)$condition <- c("primary", "primary", "TERT", "TERT")
+
+#Now, build the object that will be used for the differential exon analysis and save the resulting object.
+dxd <- DEXSeqDataSetFromSE( SE, design= ~ sample + exon + condition:exon )
+saveRDS(dxd, file= "dxd_object")
+
+#-----------------------------------------------------------------------------------------------
+#From here, we follow the same workflow as the DEXSeq vignette, starting from section 4.2.
+
+#Normalisation of the object, which is the same as used for DESeq2
+dxd <- estimateSizeFactors( dxd )
+
+#Dispersion estimation (same as DESeq2), requires replicates
+dxd <- estimateDispersions( dxd )
+plotDispEsts( dxd )
+saveRDS(dxd, file= "dxd_object_dispEst")
+
+#Testing for differential exon usage
+dxd <- testForDEU( dxd )
+saveRDS(dxd, file= "dxd_object_DEU")
+
+#Estimating logfold changes for each exon
+dxd <- estimateExonFoldChanges( dxd, fitExpToVar="condition")
+saveRDS(dxd, file= "dxd_object_ExonlogFC")
+
+#Storing your results and its metadata
+dxr1 <- DEXSeqResults( dxd )
+metadata <- mcols(dxr1)
+saveRDS(dxr1, file= "diff_splice_results")
+
+#This line will tell you how many exons are below a padj value of 0.05, which indicates how many exons are significant.
+table ( dxr1$padj < 0.05 )
+
+#This line tells you how many genes have at least one significant exon.
+table ( tapply( dxr1$padj < 0.05, dxr1$groupID, any ) )
+
+#Generate an MA plot, which plots mean expression against the log2 fold change. Significant exons are marked in red.
+plotMA( dxr1, cex=0.8 )
+
+#Visualize the result of the splicing analysis for a single gene (given as FlyBase ID), based on fitted expression values.
+plotDEXSeq( dxr1, "FBgn0010909", legend=TRUE, cex.axis=1.2, cex=1.3, lwd=2 )
+
+#Visualize the result of the splicing analysis for a single gene (given as FlyBase ID), based on raw expression values.
+plotDEXSeq( dxr1, "FBgn0010909", expression=FALSE, norCounts=TRUE,
+            legend=TRUE, cex.axis=1.2, cex=1.3, lwd=2 )
+
+#Visualising relative splicing changes per gene (given as FlyBase ID), which does not take into account general up/downregulation of the gene.
+plotDEXSeq( dxr1, "FBgn0005558", expression=FALSE, splicing=TRUE,
+            legend=TRUE, cex.axis=1.2, cex=1.3, lwd=2 )
+
+#Generate an HTML report
+dxr1<- readRDS("/scratch/szande_jarts/diff_gene_expression_wt_vs_TERT/20220523/diff_splice_results")
+DEXSeqHTML( dxr1, FDR=0.05, color=c("#FF000080", "#0000FF80") )
+
+#IF YOU ARE CONFIDENT IN YOUR PROCESSING STEPS: ENTIRE ANALYSIS IN ONE GO FROM DXD OBJECT
+dxd = DEXSeqDataSetFromHTSeq(
+  countFiles,
+  sampleData=sampleTable,
+  design= ~ sample + exon + condition:exon,
+  flattenedfile=flattenedFile )
+
+dxr = DEXSeq(dxd)
+
+#------------------------------------------------------------------------------------------
+#Make a human-readable results data frame by extracting important data for each exon. GenomicData cannot be extracted as it is not suited for a data frame.
+dxr1<- readRDS("/scratch/szande_jarts/diff_gene_expression_wt_vs_TERT/20220523/diff_splice_results")
+dxr2 <- cbind(dxr1$groupID,dxr1$featureID,dxr1$exonBaseMean,dxr1$dispersion,dxr1$stat,
+              dxr1$pvalue,dxr1$padj,dxr1$primary,dxr1$TERT,dxr1$log2fold_TERT_primary,
+              dxr1$countData,dxr1$transcripts)
+
+dxr2 <- as.data.frame(dxr2)
+colnames(dxr2) <- c("groupID", "featureID","exonBaseMean","dispersion","stat","pvalue",
+                    "padj","primary","TERT","log2fold_TERT_primary",
+                    "counts_LSC_wt_1","counts_LSC_wt_2","counts_LSC_TERT_1","counts_LSC_TERT_2","transcripts")
+
+#Filter the exons based on a padj <0.05 and a log2 fold change of <-1 or >1.
+dxr2<-  subset(dxr2, dxr2$padj<=0.05)
+dxr2<- subset(dxr2, dxr2$log2fold_TERT_primary<=-1 | dxr2$log2fold_TERT_primary>=1)
+
+#This line shows you how many exons are left after filtering
+table ( dxr2$padj < 0.05 )
+
+#This line shows you how many genes are now included
+n_distinct(dxr2$groupID)
+
+#For further analysis, it is more interesting to see which genes are affected instead of which exons are affected. Therefore, this code extracts the gene names.
+#Obtain the ENSEMBL transcript identifiers associated with each exon
+transcripts <- dxr2$transcripts
+#Get these transcripts out of the list and into a data frame
+df <- ldply (transcripts, data.frame)
+colnames(df) <- c("accession", "transcript")
+#Obtain an ENSEMBL human database
+mart <- useDataset("hsapiens_gene_ensembl", useMart("ensembl"))
+#Extract the transcript identifiers only
+genes <- df$transcript
+#Convert the transcript IDs to gene symbols
+G_list <- getBM(attributes= c("ensembl_transcript_id","hgnc_symbol"),values=genes,mart= mart)
+G_list[,2] <- as.character(G_list[,2])
+colnames(G_list) <- c("transcript","hgnc_symbol")
+#Remove the decimals from the transcript ID in the original dataframe, as  converting the transcript IDs automatically removes decimals as well. If you want to couple these, then they both need to be without decimals.
+df$transcript_new <- sub("\\.\\d+$", "", df$transcript) 
+colnames(df) <- c("accession", "transcript_full","transcript")
+#Couple the gene symbols back to the exons they came from. Not every transcript will have a gene symbol.
+df_coupled <- inner_join(df, G_list, by = "transcript") 
+dxr2$accession <- rownames(dxr2)
+#Add the gene symbols to the original results data frame
+dxr2 <- inner_join(df_coupled, dxr2, by = "accession") 
+
+#maximum number of counts: is higher than gene counts due to BAM processing steps
+max(as.vector(unlist(dxr2$counts_LSC_wt_1)))
+
+#I now want to filter for genes with a total exon count of 100 or higher. Therefore, I first need to obtain the counts
+counts_LSC_wt_1 <- as.vector(unlist(dxr2$counts_LSC_wt_1))
+counts_LSC_wt_2 <- as.vector(unlist(dxr2$counts_LSC_wt_2))
+counts_LSC_TERT_1 <- as.vector(unlist(dxr2$counts_LSC_TERT_1))
+counts_LSC_TERT_2 <- as.vector(unlist(dxr2$counts_LSC_TERT_2))
+
+#Then, I calculate the sum of the counts for each exon.
+counts <- cbind(counts_LSC_wt_1,counts_LSC_wt_2,counts_LSC_TERT_1,counts_LSC_TERT_2)
+counts <- as.data.frame(counts)
+counts$sum_counts <- rowSums(counts[,1:4])
+sum_counts <- counts$sum_counts
+#And I add the sum of the counts for each exon back into the original results data frame
+dxr2 <- cbind(dxr2, sum_counts)
+
+#Filter exons based on sum of counts above 100
+dxr2_filter <- dxr2[dxr2$sum_counts >=100,]
+
+#Getting the absolute log2FC
+dxr2_filter$log2fold_TERT_primary <- as.numeric(dxr2_filter$log2fold_TERT_primary)
+dxr2_filter$abslog2 <- abs(dxr2_filter$log2fold_TERT_primary)
+
+#I now add up all absolute log2 fold changes over the exons of a gene
+genes <- as.data.frame(dxr2_filter$groupID)
+genes <- t(genes)
+#I generate a table of all genes and their identifiers
+genes <- cbind(genes, dxr2_filter$hgnc_symbol)
+genes <- as.data.frame(genes)
+colnames(genes) <- c("groupID","hgnc_symbol")
+
+#At the same time, I add up all absolute log2FC per group ID
+genes_log2 <- aggregate(abslog2 ~ as.vector(unlist(groupID)), data=dxr2_filter, sum)
+genes_log2 <- as.data.frame(genes_log2)
+colnames(genes_log2) <- c("groupID","sum_abslog2")
+
+#Then, I couple the summed absolute log2FC tot he gene name
+genes_log2 <- inner_join(genes_log2,genes, by = "groupID")
+#And I remove duplicate entries
+genes_log2 <- unique(genes_log2)
+#GroupIDs that did not map to a gene symbol are discarded.
+genes_log2 <- genes_log2[!genes_log2$hgnc_symbol == "",]
+#The resulting list of differentially spliced genes is exported to the results directory.
+write.table(genes_log2, file = paste0(resultsdir,'/diff_splicing_genes.tsv'), sep= "\t", row.names=FALSE, col.names =TRUE)
+
+#END
+```
