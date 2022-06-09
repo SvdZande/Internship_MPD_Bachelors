@@ -1,0 +1,39 @@
+
+#Coupling gene names: a script to change count tables with ENSEMBL identifiers to one with gene names
+#This script does not require any R packages, only the mart_export.txt file
+
+#Author: Sidney van der Zande (s1033266)
+#Contact: sidney.vanderzande@ru.nl
+
+```{r}
+
+sessionInfo()
+
+#Set the working directory to the one that contains mart_export.txt
+setwd ("/scratch/szande_jarts")
+
+#Import the list of gene names from mart_export.txt
+names <- read.delim("mart_export.txt", header = TRUE, sep = "\t")
+
+#Set the working directory to the one that contains the count table
+setwd("/scratch/szande_jarts/data")
+
+#Import your count table. Change the name of the file to the name your file has.
+#Keep in mind that my data is in a TSV format, but CSV is also supported if you change sep="\t" to sep=",".
+data <- read.csv("GRCh38.p13-counts_PKC.tsv", header = TRUE, sep= "\t")
+
+#Change the column names for easier merging. Change the second and third column name to what you want to call your samples.
+#Do not change the name of column 1, "Gene.stable.ID".
+colnames(data) <- c("Gene.stable.ID", "PKC_1", "PKC_2")
+
+#Couple the gene names to their ENSEMBL ID
+coupled_list <- merge(names , data)
+
+#Remove the ENSEMBL IDs so that only the gene name remains
+coupled_list_trimmed <- subset(coupled_list, select = -c(1))
+
+#Export the new counts table to your working directory
+write.csv(coupled_list_trimmed, "coupled_list_trimmedKC_primary.csv")
+
+#END
+```
