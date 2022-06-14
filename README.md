@@ -20,9 +20,9 @@ _splicing_analysis.v1.1.Rmd_ : an R script that can run differential splice anal
 
 _coupling_gene_names.Rmd_ : a simple R script for coupling a table of counts + ENSEMBL identifiers to their gene names.
 
-_r_env_4_1.yaml_ : a yaml file to create the conda environment I used to run all analyses except the splicing analysis.
+_r_env_4_1.yml_ : a yml file to create the conda environment I used to run all analyses except the splicing analysis.
 
-_r_env_4_1_splicing.yaml_ : a yaml file to create the conda environment I used to run the splicing analysis.
+_r_env_4_1_splicing.yml_ : a yml file to create the conda environment I used to run the splicing analysis.
 
 _mart_export.txt_ : a list of gene names and their ENSEMBL identifiers, which can be used to couple count tables with ENSEMBL identifiers to their corresponding gene names.
 
