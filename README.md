@@ -6,25 +6,25 @@ It was performed in the group of Jo Zhou, department of Molecular Developmental 
 ## Files
 The directory consists of the following R scripts:
 
-_deseq2_wt_vs_TERT_LSC_v1.5B.Rmd_ : an R script that takes count tables for primary and immortalised limbal stem cells as input and performs differential gene analysis, as well as KEGG, GO-term and oncogene analysis among others.
-
-_deseq2_wt_vs_TERT_KC_v1.3.Rmd_ : an R script that does the same as the script mentioned above, but now taking keratinocyte primary and immortalised samples as input.
-
-_deseq2_wt_vs_TERT_overall_v1.2.Rmd_ : an R script that again does the same things as mentioned above, but it takes primary and immortalised samples of both limbal stem cells and keratinocytes and does an overall primary vs TERT differential gene analysis.
+_coupling_gene_names.Rmd_ : a simple R script for coupling a table of counts + ENSEMBL identifiers to their gene names.
 
 _deseq2_wt_vs_TERT_inhouse_v1.1.Rmd_ : an R script that does the same analysis as above, but instead compares gene expression between primary limbal stem cells and keratinocytes.
 
-_seurat_scRNA_analysis_v1.0.Rmd_ : an R script that accepts a Seurat object of single-cell RNA sequencing data and perform statistical analyses, as well as normalisation, visualisation, principal component analysis and conversion to pseudobulk (UMAP-clsutering based and random assignment).
+_deseq2_wt_vs_TERT_KC_v1.3.Rmd_ : an R script that does the same as the script mentioned above, but now taking keratinocyte primary and immortalised samples as input.
 
-_splicing_analysis.v1.1.Rmd_ : an R script that can run differential splice analysis on a single gene (using SGSeq) or on the entire genome (using DEXSeq). This script requires indexed BAM files (2 replicates for each conditions) that have been aligned using a splice-sensitive programme (in this project, we used STAR).
+_deseq2_wt_vs_TERT_LSC_v1.5B.Rmd_ : an R script that takes count tables for primary and immortalised limbal stem cells as input and performs differential gene analysis, as well as KEGG, GO-term and oncogene analysis among others.
 
-_coupling_gene_names.Rmd_ : a simple R script for coupling a table of counts + ENSEMBL identifiers to their gene names.
+_deseq2_wt_vs_TERT_overall_v1.2.Rmd_ : an R script that again does the same things as mentioned above, but it takes primary and immortalised samples of both limbal stem cells and keratinocytes and does an overall primary vs TERT differential gene analysis.
+
+_mart_export.txt_ : a list of gene names and their ENSEMBL identifiers, which can be used to couple count tables with ENSEMBL identifiers to their corresponding gene names.
 
 _r_env_4_1.yml_ : a yml file to create the conda environment I used to run all analyses except the splicing analysis.
 
 _r_env_4_1_splicing.yml_ : a yml file to create the conda environment I used to run the splicing analysis.
 
-_mart_export.txt_ : a list of gene names and their ENSEMBL identifiers, which can be used to couple count tables with ENSEMBL identifiers to their corresponding gene names.
+_seurat_scRNA_analysis_v1.0.Rmd_ : an R script that accepts a Seurat object of single-cell RNA sequencing data and perform statistical analyses, as well as normalisation, visualisation, principal component analysis and conversion to pseudobulk (UMAP-clsutering based and random assignment).
+
+_splicing_analysis.v1.1.Rmd_ : an R script that can run differential splice analysis on a single gene (using SGSeq) or on the entire genome (using DEXSeq). This script requires indexed BAM files (2 replicates for each conditions) that have been aligned using a splice-sensitive programme (in this project, we used STAR).
 
 ## Setup
 Running the scripts mentioned in the "Files" section may take large amounts of RAM, especially splicing analysis since BAM files can become very large. Therefore, working on an external server is advised. For this project, I used the MobaXterm application to work on a remote server. To run R studio on an external server, you will need to set up a conda environment.
