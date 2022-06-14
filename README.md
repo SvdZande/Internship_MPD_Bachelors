@@ -8,11 +8,11 @@ The directory consists of the following R scripts:
 
 _coupling_gene_names.Rmd_ : a simple R script for coupling a table of counts + ENSEMBL identifiers to their gene names.
 
-_deseq2_wt_vs_TERT_inhouse_v1.1.Rmd_ : an R script that does the same analysis as above, but instead compares gene expression between primary limbal stem cells and keratinocytes.
-
 _deseq2_wt_vs_TERT_KC_v1.3.Rmd_ : an R script that does the same as the script mentioned above, but now taking keratinocyte primary and immortalised samples as input.
 
 _deseq2_wt_vs_TERT_LSC_v1.5B.Rmd_ : an R script that takes count tables for primary and immortalised limbal stem cells as input and performs differential gene analysis, as well as KEGG, GO-term and oncogene analysis among others.
+
+_deseq2_wt_vs_TERT_inhouse_v1.1.Rmd_ : an R script that does the same analysis as above, but instead compares gene expression between primary limbal stem cells and keratinocytes.
 
 _deseq2_wt_vs_TERT_overall_v1.2.Rmd_ : an R script that again does the same things as mentioned above, but it takes primary and immortalised samples of both limbal stem cells and keratinocytes and does an overall primary vs TERT differential gene analysis.
 
