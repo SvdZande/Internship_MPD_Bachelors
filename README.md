@@ -100,7 +100,7 @@ You can use the _deseq2_wt_vs_TERT_KC_v1.3.Rmd_ file to perform the same primary
 To perform an overall analysis of primary vs TERT conditions, you can use the _deseq2_wt_vs_TERT_overall_v1.2.Rmd_ file. As an input, you provide all count tables you have (primary LSC, primary KC, TERT LSC, and TERT KC).
 
 ### Analysing primary inhouse samples (LSC vs KC)
-If you perform the analyses above and look at the result of PCA analyses and sample clustering, you might find that the primary inhouse samples (PKC_1/2 and LSC_wt_1/2) are very alike. If you want, you can rule out any sample mixups using the _deseq2_wt_vs_TERT_inhouse_v1.1.Rmd_ script, which compares the samples based on their cell type. 
+If you perform the analyses above and look at the result of PCA analyses and sample clustering, you might find that the primary inhouse samples (PKC_1/2 and LSC_wt_1/2) are very alike. If you want, you can rule out any sample mixups using the _deseq2_wt_vs_TERT_inhouse_v1.1.Rmd_ script, which compares the primary inhouse samples based on their cell type. 
 
 ### Splicing analysis
  Instead of using the environment specified by _r_env_4_1.yml_, make a new environment using the _r_env_4_1_splicing.yml_ file. As an input, you need to provide BAM files of two primary LSC replicates and two TERT LSC replicates. These BAM files need to be aligned using a splice-sensitive programme (STAR, TopHat) and they need to be indexed. Then, you can provide these as input to _splicing_analysis.v1.1.Rmd_. The result will be saved to your results directory and can be used for further analysis in the _deseq2_wt_vs_TERT_LSC_v1.5B.Rmd_ or _deseq2_wt_vs_TERT_overall_v1.2.Rmd_ scripts.
