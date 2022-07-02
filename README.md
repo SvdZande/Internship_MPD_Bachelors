@@ -24,7 +24,7 @@ _r_env_4_1_splicing.yml_ : a yml file to create the conda environment I used to 
 
 _seurat_scRNA_analysis_v1.0.Rmd_ : an R script that accepts a Seurat object of single-cell RNA sequencing data and perform statistical analyses, as well as normalisation, visualisation, principal component analysis and conversion to pseudobulk (UMAP-clsutering based and random assignment).
 
-_splicing_analysis.v1.1.Rmd_ : an R script that can run differential splice analysis on a single gene (using SGSeq) or on the entire genome (using DEXSeq). This script requires indexed BAM files (2 replicates for each conditions) that have been aligned using a splice-sensitive programme (in this project, we used STAR).
+_splicing_analysis.v1.2.Rmd_ : an R script that can run differential splice analysis on a single gene (using SGSeq) or on the entire genome (using DEXSeq). This script requires indexed BAM files (2 replicates for each conditions) that have been aligned using a splice-sensitive programme (in this project, we used STAR).
 
 ## Setup
 Running the scripts mentioned in the "Files" section may take large amounts of RAM, especially splicing analysis since BAM files can become very large. Therefore, working on an external server is advised. For this project, I used the MobaXterm application to work on a remote server. To run R studio on an external server, you will need to set up a conda environment.
