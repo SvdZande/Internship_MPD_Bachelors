@@ -197,12 +197,12 @@ joined_results$label <- NA
 #Assigning a label containing the gene name to the top 6 genes with the highest abslog2FC
 joined_results <- joined_results[order(joined_results$log2FoldChange),]
 joined_results$label[c(1:3, 26785:26787)] <- joined_results$gene.name[c(1:3, 26785:26787)]
-#Assigning a label containing the gene name to the top 5 genes with the lowest padj
+#Assigning a label containing the gene name to the top 10 genes with the lowest padj
 joined_results <- joined_results[order(joined_results$padj),]
-joined_results$label[c(1:5)] <- joined_results$gene.name[c(1:5)]
+joined_results$label[c(1:10)] <- joined_results$gene.name[c(1:10)]
 
 #Generate a volcano plot indicating significant genes
-volcano <-ggplot(joined_results, aes(x=log2FoldChange, y=-log10(padj), col=diffexpressed, label=label)) + geom_point() + ggtitle("Volcano plot of N/TERT compared to wildtype of all cell types") + geom_vline(xintercept=c(-1, 1), col="black") +
+volcano <-ggplot(joined_results, aes(x=log2FoldChange, y=-log10(padj), col=diffexpressed, label=label)) + geom_point() + ggtitle("Volcano plot of hTERT cells compared to primary cells of all cell types") + geom_vline(xintercept=c(-1, 1), col="black") +
         geom_hline(yintercept=-log10(0.05), col="black") + scale_colour_manual(values = ggplotcolors) + geom_text_repel(box.padding=0.5, max.overlaps = Inf)
 volcano
 
@@ -269,12 +269,28 @@ z_logfilter <- data.matrix(z_logfilter, rownames.force = NA)
 z_logfilter <- z_logfilter[order(z_logfilter[,1]),]
 
 ##Heatmapping of padj<0.05 & log2FC filtered genes
+#I annotate the 15 genes with the highest log2FCs
+log_genes <- result_wt_vs_TERT_logfilter[order(-result_wt_vs_TERT_logfilter$abslog2FoldChange),]
+log_genes <- log_genes[1:17,]
+log_genes <- rownames(log_genes)
+
+#I now make the labels of the randomly chosen genes
+log_rows <- which(rownames(z_logfilter)%in% log_genes, arr.ind = TRUE)
+anno_logfilter = anno_mark(at = log_rows, labels = log_genes , which = "row")
+
 #Define the colors of the heatmap
 f4 = colorRamp2(c(-1.5, 0, 1.5), c("blue", "white", "red"))
-#Make labels for genes with highest/lowest LSC_1 z-scores
-anno_logfilter = anno_mark(at = c(1:10, 5633:5642), labels = rownames(z_logfilter[c(1:10 , 5633:5642),]), which = "row")
-#Make the heatmap using the previously specified colors and labels
-htlog <- Heatmap(z_logfilter, name="z-score", column_title = "Heatmap of significant differentially expressed genes", col = f4,  row_names_gp = gpar(fontsize = 5)) + rowAnnotation(mark= anno_logfilter)
+#Make the heatmap using the previously specified colors and labels. The order of the genes in the heatmap  is not correct yet.
+htlog <- Heatmap(z_logfilter, name="z-score", column_title = "Heatmap of differentially expressed genes", col = f4,  row_names_gp = gpar(fontsize = 5)) + rowAnnotation(mark= anno_logfilter)
+#Because of the incorrect order, we have to reorder z_logfilter based on the order of rows in the heatmap
+row_order(htlog)
+z_logfilter <- z_logfilter[row_order(htlog),]
+#Then, we can find back the genes in the correct order, make the labels, and specify the heatmap
+log_genes <- log_genes[order(match(log_genes,rownames(z_logfilter)))]
+log_rows <- which(rownames(z_logfilter)%in% log_genes, arr.ind = TRUE)
+anno_logfilter = anno_mark(at = log_rows, labels = log_genes , which = "row")
+htlog <- Heatmap(z_logfilter, name="z-score", column_title = "Heatmap of differentially expressed genes", col = f4,  row_names_gp = gpar(fontsize = 5)) + rowAnnotation(mark= anno_logfilter)
+htlog
 
 #Export the list of log2>1 and padj<0.05 genes ordered on descending log2FC
 genes_2 <- result_wt_vs_TERT_logfilter[order(-result_wt_vs_TERT_logfilter$log2FoldChange),]
@@ -284,7 +300,7 @@ genes_2 <- gsub(" ", "", genes_2)
 write.table(genes_2, file = paste0(resultsdir,'/wt_vs_TERT_all_genes_2_v2.tsv'), sep= "\t", row.names=FALSE, col.names =FALSE)
 
 #Find the clusters of differential genes up/downregulated in TERT as done before
-htlog_cluster <- Heatmap(z_logfilter, km=2,  name="z-score", column_title = "Heatmap of differential significant genes", col = f4,  row_names_gp = gpar(fontsize = 5)) + rowAnnotation(mark=anno_logfilter)
+htlog_cluster <- Heatmap(z_logfilter, km=2,  name="z-score", column_title = "Heatmap of differential  genes", col = f4,  row_names_gp = gpar(fontsize = 5)) + rowAnnotation(mark=anno_logfilter)
 htlog_cluster <- draw(htlog_cluster)
 genes_htlog <- row_order(htlog_cluster)
 genes_TERT_high_log <- genes_htlog[[2]]
@@ -297,24 +313,24 @@ z_logfilter_primary <- subset(z_logfilter, rownames(z_logfilter) %in% genes_TERT
 
 f4 = colorRamp2(c(-1.5, 0, 1.5), c("blue", "white", "red"))
 anno_logfilter_primary = anno_mark(at = c(1:5, 3318:3327), labels = rownames(z_logfilter_primary[c(1:5 , 3318:3327),]), which = "row")
-htlog_primary <- Heatmap(z_logfilter_primary, name="z-score", column_title = "Heatmap of TERT-low significant differentially expressed genes", col = f4,  row_names_gp = gpar(fontsize = 5)) + rowAnnotation(mark= anno_logfilter_primary)
+htlog_primary <- Heatmap(z_logfilter_primary, name="z-score", column_title = "Heatmap of TERT-low differentially expressed genes", col = f4,  row_names_gp = gpar(fontsize = 5)) + rowAnnotation(mark= anno_logfilter_primary)
 
 #Plot the genes that are differentially upregulated in hTERT cells in their own heatmap
 z_logfilter_TERT <- subset(z_logfilter, rownames(z_logfilter) %in% genes_TERT_high_log)
 
 f4 = colorRamp2(c(-1.5, 0, 1.5), c("blue", "white", "red"))
 anno_logfilter_TERT = anno_mark(at = c(1:5, 2306:2315), labels = rownames(z_logfilter_TERT[c(1:5 , 2306:2315),]), which = "row")
-htlog_TERT <- Heatmap(z_logfilter_TERT, km=3, name="z-score", column_title = "Heatmap of TERT-high significant differentially expressed genes", col = f4,  row_names_gp = gpar(fontsize = 5)) + rowAnnotation(mark= anno_logfilter_TERT)
+htlog_TERT <- Heatmap(z_logfilter_TERT, km=3, name="z-score", column_title = "Heatmap of TERT-high differentially expressed genes", col = f4,  row_names_gp = gpar(fontsize = 5)) + rowAnnotation(mark= anno_logfilter_TERT)
 htlog_TERT <- draw(htlog_TERT)
 
 #Plot the expression of differentially upregulated genes, but now only in hTERT samples.
 z_logfilter_TERT_subset <- z_logfilter_TERT[,9:12]
 z_logfilter_TERT_subset <- z_logfilter_TERT_subset[order(z_logfilter_TERT_subset[,4]),]
 anno_logfilter_TERT_sub = anno_mark(at = c(10:15, 150:155, 274:279), labels = rownames(z_logfilter_TERT_subset[c(10:15, 150:155, 274:279),]), which = "row")
-htlog_TERT_subset <- Heatmap(z_logfilter_TERT_subset, km=3, name="z-score", column_title = "Heatmap of TERT-high significant differentially expressed genes", col = f4,  row_names_gp = gpar(fontsize = 5)) + rowAnnotation(mark= anno_logfilter_TERT_sub)
+htlog_TERT_subset <- Heatmap(z_logfilter_TERT_subset, km=3, name="z-score", column_title = "Heatmap of TERT-high differentially expressed genes", col = f4,  row_names_gp = gpar(fontsize = 5)) + rowAnnotation(mark= anno_logfilter_TERT_sub)
 
 ##Find specified genes of interest in your heatmap
-find_all <- c("EHF","PAX6" ,"TP63", "MEIS1", "FOXC1", "OTX1","KRT5","KRT14" ,"IGFBP3", "MCM3", "IVL", "LORICRIN", "FLG", "TGM1")
+find_all <- c("EHF","PAX6" ,"TP63", "MEIS1", "FOXC1", "OTX1","KRT5","KRT14" , "MCM3", "IVL", "LORICRIN", "FLG", "TGM1")
 
 #specify in what dataset you want to find these genes, in this case z_logfilter
 find_all_row <- which(rownames(z_logfilter)%in% find_all, arr.ind = TRUE)
@@ -373,7 +389,7 @@ p_marker
 dev.off()
 
 #I do the same for cell cycle genes as I did for important markers above
-cellcycle <- c("PCNA", "TOP2A", "MCM6", "MKI67", "CCND1", "CDK2", "GMNN", "AURKA", "AURKB")
+cellcycle <- c("PCNA", "TOP2A", "MCM6", "MKI67", "CCND1", "CDK2", "GMNN", "AURKA", "AURKB", "TERT")
 find_set_cell <- NULL
 
 for (xx in unique(cellcycle)) {
@@ -391,8 +407,8 @@ p_cell <- ggplot(find_set_cell, aes(x = gene, y = log10(TPM+1))) +
   geom_bar(
     aes(fill = condition),
     stat = "identity" , position = position_dodge(0.8),
-    width = 0.7) + geom_signif(y_position = c(1.7,2.7), xmin = c(3.6,4.6), 
-                               xmax = c(4.4,5.4), annotation = c("*","*"),
+    width = 0.7) + geom_signif(y_position = c(2.1, 1.7, 1.9, 3.4), xmin = c(0.6,4.6,8.6,9.6), 
+                               xmax = c(1.4, 5.4, 9.4, 10.4), annotation = c("*","*", "*", "*"),
                                tip_length = 0.02)
 
 #Heatmapping the cell cycle genes
@@ -437,18 +453,18 @@ ego_2 <- enrichGO(gene         = genes_2,
                   readable      = FALSE)
 
 #I plot both results in barplots
-barplot(ego, showCategory=15, title = "Barplot for padj genes")
+barplot(ego, showCategory=15, order = T, title = "Barplot for padj genes")
 
-barplot(ego_2, showCategory=15, title = "Barplot for log2 genes") 
+barplot(ego_2, showCategory=15, order = T, title = "Barplot for log2 genes") 
 
 #Merging go terms based on p values, this is to combine similar terms
 ego_new <- simplify(ego, cutoff = 0.9, by = "p.adjust", select_fun = min)
 ego_new_2 <- simplify(ego_2, cutoff = 0.9, by = "p.adjust", select_fun = min)
 
 #Again, I plot the results
-barplot(ego_new, showCategory=15, title = "Simplified barplot for padj genes")
+barplot(ego_new, showCategory=15, order = T, title = "Simplified barplot for padj genes")
 
-barplot(ego_new_2, showCategory=15, title = "Simplified barplot for log2 genes")
+barplot(ego_new_2, showCategory=15, order = T,title = "Simplified barplot for log2 genes")
 
 #Now, I analyse the differentially expressed genes separately based on up- or downregulation in TERT cells
 #Genes differentially upregulated in TERT
@@ -472,8 +488,8 @@ ego_low_log <- enrichGO(gene         = genes_TERT_low_log,
                     readable      = FALSE)
 
 #Plotting of the results
-high_log2_GO <- barplot(ego_high_log, showCategory = 15, title = "Differentially upregulated genes in TERT")
-low_log2_GO <- barplot(ego_low_log, showCategory = 15, title = "Differentially downregulated genes in TERT")
+high_log2_GO <- barplot(ego_high_log, order = T, showCategory = 15, title = "Differentially upregulated genes in TERT")
+low_log2_GO <- barplot(ego_low_log, order = T, showCategory = 15, title = "Differentially downregulated genes in TERT")
 high_log2_GO
 low_log2_GO
 
@@ -777,7 +793,7 @@ plotPCA.dim <- function (object, intgroup = "conditions", ntop = 500, returnData
     attr(d, "percentVar") <- percentVar[1:3]
     return(d)
   }
-   ggplot(d, aes(PC1, PC2, color = conditions, label = name)) +geom_point(size=3) + geom_label_repel(size=7,box.padding=0.5) + xlab(paste0("PC1: ",round(var_explained_df[1,2]*100,digits = 2),"%")) + ylab(paste0("PC2: ",round(var_explained_df[2,2]*100, digits = 2),"%"))
+   ggplot(d, aes(PC1, PC2, color = conditions, label = name)) +geom_point(size=3) + geom_label_repel(size=10,box.padding=0.5) + xlab(paste0("PC1: ",round(var_explained_df[1,2]*100,digits = 2),"%")) + ylab(paste0("PC2: ",round(var_explained_df[2,2]*100, digits = 2),"%"))
    #if you ever want to change which PC dimensions to look at, change the PC in the ggplot function. For example, swap out "PC2" for "PC3". This function can go up to PCA 5.
 }
 
@@ -818,8 +834,8 @@ ego_PC1_neg <- enrichGO(gene         = genes_PC1_filtered_neg$Gene,
                         readable      = FALSE)
 
 #Visualisation of the results
-PCA_pos_ALL <- barplot(ego_PC1_pos, showCategory = 15, title = "Processes giving positive weight to PC1")
-PCA_neg_ALL <- barplot(ego_PC1_neg, showCategory = 15, title = "Processes giving negative weight to PC1")
+PCA_pos_ALL <- barplot(ego_PC1_pos, order = T, showCategory = 15, title = "Processes giving positive weight to PC1")
+PCA_neg_ALL <- barplot(ego_PC1_neg, order = T, showCategory = 15, title = "Processes giving negative weight to PC1")
 PCA_pos_ALL
 PCA_neg_ALL
 
@@ -856,8 +872,8 @@ ego_PC2_neg <- enrichGO(gene         = genes_PC2_filtered_neg$Gene,
                         readable      = FALSE)
 
 #And I visualize the results again
-barplot(ego_PC2_pos, showCategory = 15, title = "GO analysis of genes giving positive weight to PC2")
-barplot(ego_PC2_neg, showCategory = 15, title = "GO analysis of genes giving negative weight to PC2")
+barplot(ego_PC2_pos, showCategory = 15, order = T, title = "GO analysis of genes giving positive weight to PC2")
+barplot(ego_PC2_neg, showCategory = 15, order = T, title = "GO analysis of genes giving negative weight to PC2")
 
 #I include the heatmap of the sample distances in the PCA analysis
 sampleDists <- dist(t(assay(vst_dds)))
@@ -874,9 +890,9 @@ dev.off()
 #--------------------------------------------------------------------------------------------------------
 
 #Make a Venn diagram that compares the differential genes in LSCs to the differential genes in KCs and finds the overlap
-log2_KC_genes <- read.table("/scratch/szande_jarts/diff_gene_expression_wt_vs_TERT/20220609/wt_vs_TERT_KC_genes_2_v3.tsv")
+log2_KC_genes <- read.table("/scratch/szande_jarts/diff_gene_expression_wt_vs_TERT/20220629/wt_vs_TERT_KC_genes_2_v3.tsv")
 log2_KC_genes <- as.vector(log2_KC_genes[,1])
-log2_LSC_genes <- read.table("/scratch/szande_jarts/diff_gene_expression_wt_vs_TERT/20220609/wt_vs_TERT_LSC_genes_2.v2.tsv")
+log2_LSC_genes <- read.table("/scratch/szande_jarts/diff_gene_expression_wt_vs_TERT/20220629/wt_vs_TERT_LSC_genes_2.v2.tsv")
 log2_LSC_genes <- as.vector(log2_LSC_genes[,1])
 
 #Plot this Venn diagram and export it to your results folder
@@ -895,10 +911,10 @@ unlink("*.log") #will remove the logging files that come with making a Venn diag
 
 #The code below will make an Upset plot showing if genes are upregulated or downregulated in LSCs and KCs, and if these genes show large overlap
 #I first import the DESeq2 result of the KC analysis
-DESeq_KC <- read.csv("/scratch/szande_jarts/diff_gene_expression_wt_vs_TERT/20220609/wt_vs_TERT_KC_DESeq2_v3.tsv", header = TRUE, sep= "\t")
+DESeq_KC <- read.csv("/scratch/szande_jarts/diff_gene_expression_wt_vs_TERT/20220629/wt_vs_TERT_KC_DESeq2_v3.tsv", header = TRUE, sep= "\t")
 DESeq_KC$Gene.name <- rownames(DESeq_KC)
 #Then, the DESeq2 result of the LSC analysis
-DESeq_LSC <- read.csv("/scratch/szande_jarts/diff_gene_expression_wt_vs_TERT/20220609/wt_vs_TERT_LSC_DESeq2.v2.tsv", header = TRUE, sep= "\t")
+DESeq_LSC <- read.csv("/scratch/szande_jarts/diff_gene_expression_wt_vs_TERT/20220629/wt_vs_TERT_LSC_DESeq2.v2.tsv", header = TRUE, sep= "\t")
 DESeq_LSC$Gene.name <- rownames(DESeq_LSC)
 #Then, I join these together
 DESeq_all <- inner_join(DESeq_KC, DESeq_LSC, by = "Gene.name")
@@ -935,12 +951,12 @@ dev.off()
 #I now make a heatmap of genes differential in LSCs, in KCs, or in both.
 #I start with importing the differential genes of the individual analyses and assigning them the cell type they came from.
 #LSC
-diff_LSC <- read.csv("/scratch/szande_jarts/diff_gene_expression_wt_vs_TERT/20220609/wt_vs_TERT_LSC_genes_2.v2.tsv", header = FALSE, sep= "\t")
+diff_LSC <- read.csv("/scratch/szande_jarts/diff_gene_expression_wt_vs_TERT/20220629/wt_vs_TERT_LSC_genes_2.v2.tsv", header = FALSE, sep= "\t")
 colnames(diff_LSC) <- c("Gene.name")
 diff_LSC$Cell.type <- "LSC"
 
 #KC
-diff_KC <- read.csv("/scratch/szande_jarts/diff_gene_expression_wt_vs_TERT/20220609/wt_vs_TERT_KC_genes_2_v3.tsv", header = FALSE, sep= "\t")
+diff_KC <- read.csv("/scratch/szande_jarts/diff_gene_expression_wt_vs_TERT/20220629/wt_vs_TERT_KC_genes_2_v3.tsv", header = FALSE, sep= "\t")
 colnames(diff_KC) <- c("Gene.name")
 diff_KC$Cell.type <- "KC"
 
@@ -995,11 +1011,6 @@ anno_combrow <- which(rownames(z_values_diff)%in% anno_names, arr.ind = TRUE)
 anno_comb = anno_mark(at = anno_combrow, labels = anno_names , which = "row")
 
 #Now, the heatmap can be made using the cell type, sample type, and gene name annotations.
-cellclusterHT <-Heatmap(
-  diff_all_values[3:16], name = "z-score",
-  left_annotation=ha,
-  bottom_annotation=colAnn, column_title = "Heatmap of all differential genes in at least one condition")
-  + rowAnnotation(mark = anno_comb)
 cellclusterHT <- Heatmap(diff_all_values[3:14], name="z-score", 
                          column_title = "Heatmap of all differential genes in at least one condition",
                          left_annotation=ha,

@@ -268,15 +268,15 @@ find_LSC_row <- which(rownames(z_logfilter)%in% find_LSC, arr.ind = TRUE)
 #Specify the labels for these genes
 anno_lsc = anno_mark(at = find_LSC_row, labels = find_LSC , which = "row")
 #Make the heatmap. The genes are not in the correct order yet since the heatmap does not have the same order as the vector of gene names.
-HTlsc <- Heatmap(z_logfilter, name="z-score", column_title = "Heatmap of significant differential genes indicating important LSC genes", col = f4,  row_names_gp = gpar(fontsize = 5)) + rowAnnotation(mark = anno_lsc)
+HTlsc <- Heatmap(z_logfilter, name="z-score", col = f4,  row_names_gp = gpar(fontsize = 5)) + rowAnnotation(mark = anno_lsc)
 #Because of the incorrect order, we have to reorder z_logfilter based on the order of rows in the heatmap
 row_order(HTlsc)
 z_logfilter <- z_logfilter[row_order(HTlsc),]
 #Then, we can find back the genes in the correct order, make the labels, and specify the heatmap
 find_LSC <- find_LSC[order(match(find_LSC,rownames(z_logfilter)))]
 find_LSC_row <- which(rownames(z_logfilter)%in% find_LSC, arr.ind = TRUE)
-anno_lsc = anno_mark(at = find_LSC_row, labels = find_LSC , which = "row")
-HTlsc <- Heatmap(z_logfilter, name="z-score", column_title = "Heatmap of significant differential genes indicating important LSC genes", col = f4,  row_names_gp = gpar(fontsize = 5)) + rowAnnotation(mark = anno_lsc)
+anno_lsc = anno_mark(at = find_LSC_row, labels = find_LSC , which = "row" , labels_gp = gpar(fontsize = 18))
+HTlsc <- Heatmap(z_logfilter, name="z-score", show_heatmap_legend = FALSE, col = f4, column_names_gp = gpar(fontsize = 20),  heatmap_legend_param = list(labels_gp = gpar(fontsize = 20), title_gp = gpar(fontsize = 24))) + rowAnnotation(mark = anno_lsc)
 draw(HTlsc)
 
 #We now want to find the TPM values for all these genes. 
@@ -350,8 +350,8 @@ p_cell_LSC <- ggplot(find_set_cell, aes(x = gene, y = log10(TPM+1))) +
   geom_bar(
     aes(fill = condition),
     stat = "identity" , position = position_dodge(0.8),
-    width = 0.7) + geom_signif(y_position = c(2.1, 3.3), xmin = c(0.6,8.6), 
-                            xmax = c(1.4, 9.4), annotation = c("*","*"),
+    width = 0.7) + geom_signif(y_position = c(2.1, 3.4), xmin = c(0.6,8.6), 
+                            xmax = c(1.4, 9.4), annotation = c("*", "*"),
                             tip_length = 0.02) 
 
 #Heatmapping the cell cycle genes
@@ -363,7 +363,7 @@ z_logfilter <- z_logfilter[row_order(HTcell),]
 cellcycle <- cellcycle[order(match(cellcycle,rownames(z_logfilter)))]
 find_cell_row <- which(rownames(z_logfilter)%in% cellcycle, arr.ind = TRUE)
 anno_cell = anno_mark(at = find_cell_row, labels = cellcycle , which = "row")
-HTcell_LSC <- Heatmap(z_logfilter, name="z-score", column_title = "Heatmap indicating cell cycle markers", col = f4,  row_names_gp = gpar(fontsize = 5)) + rowAnnotation(mark = anno_cell)
+HTcell_LSC <- Heatmap(z_logfilter, name="z-score", column_title = "Cell cycle (LSC)", col = f4,  row_names_gp = gpar(fontsize = 5)) + rowAnnotation(mark = anno_cell)
 
 pdf(paste(resultsdir,'LSC_cellcycle.v2.pdf',sep="/") ,width=6,height=7,paper='special')
 draw(HTcell_LSC)
@@ -396,18 +396,18 @@ ego_2 <- enrichGO(gene         = genes_2,
                   readable      = FALSE)
 
 #I plot both results in barplots
-barplot(ego, showCategory=15, title = "Barplot for padj genes")
+barplot(ego, showCategory=15, order = T, title = "Barplot for padj genes")
 
-barplot(ego_2, showCategory=15, title = "Barplot for log2 genes") 
+barplot(ego_2, showCategory=15, order = T, title = "Barplot for log2 genes") 
 
 #Merging go terms based on p values, this is to combine similar terms
 ego_new <- simplify(ego, cutoff = 0.7, by = "p.adjust", select_fun = min)
 ego_new_2 <- simplify(ego_2, cutoff = 0.7, by = "p.adjust", select_fun = min)
 
 #Again, I plot the results
-barplot(ego_new, showCategory=15, title = "Simplified barplot for padj genes")
+barplot(ego_new, showCategory=15,order = T, title = "Simplified barplot for padj genes")
 
-barplot(ego_new_2, showCategory=15, title = "Simplified barplot for log2 genes")
+barplot(ego_new_2, showCategory=15, order = T, title = "Simplified barplot for log2 genes")
 
 #Now, I analyse the differentially expressed genes separately based on up- or downregulation in TERT LSCs
 #Genes differentially upregulated in TERT
@@ -431,8 +431,8 @@ ego_low_log <- enrichGO(gene         = genes_TERT_low_log,
                          readable      = FALSE)
 
 #Plot the result
-high_log2_GO_LSC <- barplot(ego_high_log, showCategory = 15, title = "Differentially upregulated genes in TERT")
-low_log2_GO_LSC <- barplot(ego_low_log, showCategory = 15, title = "Differentially downregulated genes in TERT")
+high_log2_GO_LSC <- barplot(ego_high_log, order = T, showCategory = 15, title = "Differentially upregulated genes in TERT")
+low_log2_GO_LSC <- barplot(ego_low_log, order = T,showCategory = 15, title = "Differentially downregulated genes in TERT")
 high_log2_GO_LSC
 low_log2_GO_LSC
 
@@ -589,7 +589,7 @@ find_cell_fork <- find_cell_fork[order(match(find_cell_fork,rownames(z_logfilter
 find_cellfork_row <- which(rownames(z_logfilter)%in% find_cell_fork, arr.ind = TRUE)
 anno_cellfork = anno_mark(at = find_cellfork_row, labels = find_cell_fork, which = "row", labels_gp = gpar(fontsize = 18))
 HTcellfork_LSC <- Heatmap(z_logfilter, name="z-score",  
-                          col = f4,   column_names_gp = gpar(fontsize = 20),  heatmap_legend_param = list(labels_gp = gpar(fontsize = 20), title_gp = gpar(fontsize = 24))) + rowAnnotation(mark = anno_cellfork)
+                          col = f4,  show_heatmap_legend = FALSE, column_names_gp = gpar(fontsize = 20),  heatmap_legend_param = list(labels_gp = gpar(fontsize = 20), title_gp = gpar(fontsize = 24))) + rowAnnotation(mark = anno_cellfork)
 draw(HTcellfork_LSC)
 
 #Add the TPM graph
@@ -610,8 +610,8 @@ find_cell_fork_LSC <- ggplot(find_cellfork_LSC, aes(x = gene, y = log10(TPM+1)))
   geom_bar(
     aes(fill = condition),
     stat = "identity" , position = position_dodge(0.8),
-    width = 0.7)  + geom_signif(y_position = c(2.1,1.0,3.4,1.5), xmin = c(0.6,10.6,11.6,12.6), 
-                                xmax = c(1.4,11.4,12.4,13.4), annotation = c("*","*", "*", "*"),
+    width = 0.7)  + geom_signif(y_position = c(2.1, 1.0,3.4,1.5), xmin = c(0.6,10.6,11.6,12.6), 
+                                xmax = c(1.4,11.4,12.4,13.4), annotation = c("*","*", "*",  "*"),
                                 tip_length = 0.02)
 
 #Finding back E2F1 targets in the log filtered heatmap according to previous procedures
@@ -704,7 +704,7 @@ plotPCA.dim <- function (object, intgroup = "conditions", ntop = 500, returnData
     attr(d, "percentVar") <- percentVar[1:3]
     return(d)
   }
-  ggplot(d, aes(PC1, PC2, color = conditions, label = name)) +geom_point(size=3) + geom_label_repel(size = 7, box.padding=0.5) + xlab(paste0("PC1: ",round(var_explained_df[1,2]*100,digits = 2),"%")) + ylab(paste0("PC2: ",round(var_explained_df[2,2]*100, digits = 2),"%")) 
+  ggplot(d, aes(PC1, PC2, color = conditions, label = name)) +geom_point(size=3) + geom_label_repel(size = 10, box.padding=0.5) + xlab(paste0("PC1: ",round(var_explained_df[1,2]*100,digits = 2),"%")) + ylab(paste0("PC2: ",round(var_explained_df[2,2]*100, digits = 2),"%")) 
   #if you ever want to change which PC dimensions to look at, change the PC in the ggplot function. For example, swap out "PC2" for "PC3". This function can go up to PCA 5.
 }
 
@@ -745,8 +745,8 @@ ego_PC1_neg <- enrichGO(gene         = genes_PC1_filtered_neg$Gene,
                         readable      = FALSE)
 
 #Visualisation of the results
-PCA_pos_LSC <- barplot(ego_PC1_pos, showCategory = 15,title = "Genes giving positive weight to PC1")
-PCA_neg_LSC <- barplot(ego_PC1_neg, showCategory = 15, title = "Genes giving negative weight to PC1")
+PCA_pos_LSC <- barplot(ego_PC1_pos, order = T, showCategory = 15,title = "Genes giving positive weight to PC1")
+PCA_neg_LSC <- barplot(ego_PC1_neg, order = T, showCategory = 15, title = "Genes giving negative weight to PC1")
 
 PCA_pos_LSC
 PCA_neg_LSC
@@ -957,7 +957,7 @@ p_epi3_LSC
 dev.off()
 #-----------------------------------------------------------------------------------------
 #Import genes that are differentially spliced and extract the gene names as a vector
-splicing_genes <- read.csv("/scratch/szande_jarts/diff_gene_expression_wt_vs_TERT/20220623/diff_splicing_genes.v2.tsv", header = TRUE, sep= "\t") #old list: 20220525
+splicing_genes <- read.csv("/scratch/szande_jarts/diff_gene_expression_wt_vs_TERT/20220627/diff_splicing_genes.v2.tsv", header = TRUE, sep= "\t") #old list: 20220525
 splicing_genes <- splicing_genes[,3]
 
 #Perform a GO analysis on these genes
@@ -1000,8 +1000,8 @@ ego_splice_pos <- enrichGO(gene         = pos_splicing_log2,
 
 #And plot the results
 pdf(paste(resultsdir,'GO_LSC_splice_new.pdf',sep="/") ,width=20,height=9,paper='special')
-splice_pos_GO <- barplot(ego_splice_pos, showCategory = 15, title = "Differentially spliced genes (high)")
-splice_neg_GO <- barplot(ego_splice_neg, showCategory = 15, title = "Differentially spliced genes (low)")
+splice_pos_GO <- barplot(ego_splice_pos, order = T, showCategory = 15, title = "Differentially spliced genes (high)")
+splice_neg_GO <- barplot(ego_splice_neg, order = T, showCategory = 15, title = "Differentially spliced genes (low)")
 splice_pos_GO | splice_neg_GO
 dev.off()
 
@@ -1050,8 +1050,8 @@ ego_diff_pos <- enrichGO(gene         = pos_diff_splice_exp,
 
 #Again, make a pdf of the results
 pdf(paste(resultsdir,'GO_LSC_splice_exp_new.pdf',sep="/") ,width=20,height=9,paper='special')
-splice_diff_pos_GO <- barplot(ego_diff_pos, showCategory = 15)
-splice_diff_neg_GO <- barplot(ego_diff_neg, showCategory = 15)
+splice_diff_pos_GO <- barplot(ego_diff_pos, order = T, showCategory = 15)
+splice_diff_neg_GO <- barplot(ego_diff_neg, order = T, showCategory = 15)
 splice_diff_pos_GO | splice_diff_neg_GO
 dev.off()
 
@@ -1076,4 +1076,4 @@ write.table(wnt_genes, file = paste0(resultsdir,'/wt_vs_TERT_LSC_wnt_genes.tsv')
 dev.off()
 
 #END
-``` 
+```
