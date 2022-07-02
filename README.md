@@ -8,7 +8,7 @@ The directory consists of the following R scripts:
 
 _coupling_gene_names.Rmd_ : a simple R script for coupling a table of counts + ENSEMBL identifiers to their gene names.
 
-_deseq2_wt_vs_TERT_KC_v1.3.Rmd_ : an R script that does the same as the script mentioned above, but now taking keratinocyte primary and immortalised samples as input.
+_deseq2_wt_vs_TERT_KC_v1.3.Rmd_ : an R script that takes count tables for primary and immortalised keratinocytes as input and performs differential gene analysis, as well as KEGG, GO-term and oncogene analysis among others.
 
 _deseq2_wt_vs_TERT_LSC_v1.5B.Rmd_ : an R script that takes count tables for primary and immortalised limbal stem cells as input and performs differential gene analysis, as well as KEGG, GO-term and oncogene analysis among others.
 
@@ -24,7 +24,7 @@ _r_env_4_1_splicing.yml_ : a yml file to create the conda environment I used to 
 
 _seurat_scRNA_analysis_v1.0.Rmd_ : an R script that accepts a Seurat object of single-cell RNA sequencing data and perform statistical analyses, as well as normalisation, visualisation, principal component analysis and conversion to pseudobulk (UMAP-clsutering based and random assignment).
 
-_splicing_analysis.v1.2.Rmd_ : an R script that can run differential splice analysis on a single gene (using SGSeq) or on the entire genome (using DEXSeq). This script requires indexed BAM files (2 replicates for each conditions) that have been aligned using a splice-sensitive programme (in this project, we used STAR).
+_splicing_analysis.v1.2.Rmd_ : an R script that can run differential splice analysis on the entire genome (using DEXSeq). This script requires indexed BAM files (2 replicates for each condition) that have been aligned using a splice-sensitive programme (in this project, we used STAR).
 
 ## Setup
 Running the scripts mentioned in the "Files" section may take large amounts of RAM, especially splicing analysis since BAM files can become very large. Therefore, working on an external server is advised. For this project, I used the MobaXterm application to work on a remote server. To run R studio on an external server, you will need to set up a conda environment.
@@ -103,7 +103,7 @@ To perform an overall analysis of primary vs TERT conditions, you can use the _d
 If you perform the analyses above and look at the result of PCA analyses and sample clustering, you might find that the primary inhouse samples (PKC_1/2 and LSC_wt_1/2) are very alike. If you want, you can rule out any sample mixups using the _deseq2_wt_vs_TERT_inhouse_v1.1.Rmd_ script, which compares the primary inhouse samples based on their cell type. 
 
 ### Splicing analysis
- Instead of using the environment specified by _r_env_4_1.yml_, make a new environment using the _r_env_4_1_splicing.yml_ file. As an input, you need to provide BAM files of two primary LSC replicates and two TERT LSC replicates. These BAM files need to be aligned using a splice-sensitive programme (STAR, TopHat) and they need to be indexed. Then, you can provide these as input to _splicing_analysis.v1.1.Rmd_. The result will be saved to your results directory and can be used for further analysis in the _deseq2_wt_vs_TERT_LSC_v1.5B.Rmd_ or _deseq2_wt_vs_TERT_overall_v1.2.Rmd_ scripts.
+ Instead of using the environment specified by _r_env_4_1.yml_, make a new environment using the _r_env_4_1_splicing.yml_ file. As an input, you need to provide BAM files of two primary LSC replicates and two TERT LSC replicates. These BAM files need to be aligned using a splice-sensitive programme (STAR, TopHat) and they need to be indexed (this can be done using samtools). Then, you can provide these as input to _splicing_analysis.v1.2.Rmd_. The result will be saved to your results directory and can be used for further analysis in the _deseq2_wt_vs_TERT_LSC_v1.5B.Rmd_ or _deseq2_wt_vs_TERT_overall_v1.2.Rmd_ scripts.
 
 #
 I hope this code assists you in performing your differential gene/splice analysis.
